@@ -1,11 +1,12 @@
 ﻿namespace HyzenAutoClicker.Core;
 
-public class AutoClicker(int initialCps, int initialJitterPercentage)
+public class AutoClicker(int initialCps, int initialJitterPercentage, bool simulateHumanBehavior)
 {
     private static readonly Random Random = new();
     private int _clickDelay = 1000 / initialCps;
     private int _jitterPercentage = initialJitterPercentage;
-    private CancellationTokenSource? _cancellationTokenSource;
+    private bool _simulateHumanBehavior = simulateHumanBehavior;
+    private CancellationTokenSource _cancellationTokenSource;
 
     public void SetCps(int cps)
     {
@@ -15,6 +16,16 @@ public class AutoClicker(int initialCps, int initialJitterPercentage)
     public void SetJitter(int jitterPercentage)
     {
         _jitterPercentage = jitterPercentage;
+    }
+    
+    public void SetSimulateHumanBehavior(bool simulateHumanBehavior)
+    {
+        _simulateHumanBehavior = simulateHumanBehavior;
+    }
+    
+    public bool IsSimulatingHumanBehavior()
+    {
+        return _simulateHumanBehavior;
     }
 
     public void Start(Action clickAction)
@@ -34,15 +45,8 @@ public class AutoClicker(int initialCps, int initialJitterPercentage)
     {
         while (!token.IsCancellationRequested)
         {
-            
-            var pauseChance = Random.NextDouble();
-            var pauseProbability = 0.01;
-
-            if (pauseChance < pauseProbability)
-            {
-                var pauseDuration = Random.Next(100, 500);
-                await Task.Delay(pauseDuration, token);
-            }
+            if (_simulateHumanBehavior)
+                await SimulateHumanBehavior(token);
 
             double baseDelay = _clickDelay;
             var jitter = Random.NextDouble() * (_clickDelay * _jitterPercentage / 100.0);
@@ -50,6 +54,18 @@ public class AutoClicker(int initialCps, int initialJitterPercentage)
 
             clickAction();
             await Task.Delay(randomDelay, token);
+        }
+    }
+    
+    private async Task SimulateHumanBehavior(CancellationToken token)
+    {
+        var pauseChance = Random.NextDouble();
+        const double pauseProbability = 0.03;
+
+        if (pauseChance < pauseProbability)
+        {
+            var pauseDuration = Random.Next(100, 500);
+            await Task.Delay(pauseDuration, token);
         }
     }
 }

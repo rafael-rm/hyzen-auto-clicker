@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace HyzenAutoClicker.WFA;
 
 public static class Program
