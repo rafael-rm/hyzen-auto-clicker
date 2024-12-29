@@ -1,0 +1,49 @@
+name: Build Windows Forms Application
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build .NET Windows Forms App
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build solution
+        run: dotnet build --configuration Release
+
+      - name: Publish application
+        run: dotnet publish ./HyzenAutoClicker.WFA/HyzenAutoClicker.WFA.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -o ./output
+
+      - name: Create a tag for the release
+        id: create_tag
+        run: |
+          $TAG = "v0.0.${{ github.run_number }}"
+          if (git tag -l $TAG | Select-String $TAG) {
+            Write-Output "Tag $TAG already exists, skipping creation."
+          } else {
+            git tag $TAG
+            git push origin $TAG
+          }
+          echo "tag=$TAG" >> $env:GITHUB_ENV
+        shell: pwsh
+
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.tag }}
+          files: ./output/*.exe
